@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% block title %}Profile — DevBoard Pro{% endblock %}
+{% block page_title %}Profile{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+  <div class="col-lg-6">
+    <div class="panel">
+      <h6 class="fw-bold mb-3"><i class="bi bi-person-circle me-1"></i> Update Profile</h6>
+      <form method="POST" action="{{ url_for('profile.view_profile') }}" novalidate>
+        {{ profile_form.hidden_tag() }}
+        <div class="mb-3">
+          {{ profile_form.name.label(class="form-label small fw-semibold") }}
+          {{ profile_form.name(class="form-control") }}
+          {% for error in profile_form.name.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+        </div>
+        <div class="mb-3">
+          {{ profile_form.email.label(class="form-label small fw-semibold") }}
+          {{ profile_form.email(class="form-control") }}
+          {% for error in profile_form.email.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+        </div>
+        {{ profile_form.submit(class="btn btn-devboard-primary") }}
+      </form>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="panel">
+      <h6 class="fw-bold mb-3"><i class="bi bi-shield-lock me-1"></i> Change Password</h6>
+      <form method="POST" action="{{ url_for('profile.change_password') }}" novalidate>
+        {{ password_form.hidden_tag() }}
+        <div class="mb-3">
+          {{ password_form.current_password.label(class="form-label small fw-semibold") }}
+          {{ password_form.current_password(class="form-control") }}
+          {% for error in password_form.current_password.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+        </div>
+        <div class="mb-3">
+          {{ password_form.new_password.label(class="form-label small fw-semibold") }}
+          {{ password_form.new_password(class="form-control") }}
+          {% for error in password_form.new_password.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+        </div>
+        <div class="mb-3">
+          {{ password_form.confirm_new_password.label(class="form-label small fw-semibold") }}
+          {{ password_form.confirm_new_password(class="form-control") }}
+          {% for error in password_form.confirm_new_password.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+        </div>
+        {{ password_form.submit(class="btn btn-devboard-primary") }}
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

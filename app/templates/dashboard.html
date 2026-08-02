@@ -1,0 +1,308 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard — DevBoard Pro{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+
+<!-- Hero / Welcome -->
+<div class="dash-hero">
+  <span class="dash-hero-badge mb-2"><i class="bi bi-lightning-charge-fill"></i> {{ completion_percent }}% complete overall</span>
+  <h2 class="mb-2">Welcome back, {{ current_user.name.split(' ')[0] }} 👋</h2>
+  <p class="mb-0">
+    {% if total_tasks == 0 %}
+      You don't have any tasks yet — create a project and add your first task to get started.
+    {% elif pending_tasks == 0 %}
+      Everything is done. Great work — time to plan what's next.
+    {% elif overdue_tasks > 0 %}
+      You have {{ overdue_tasks }} overdue task{{ 's' if overdue_tasks != 1 else '' }} — worth tackling those first today.
+    {% else %}
+      You have {{ pending_tasks }} task{{ 's' if pending_tasks != 1 else '' }} in progress across {{ total_projects }} project{{ 's' if total_projects != 1 else '' }}. Keep the momentum going.
+    {% endif %}
+  </p>
+</div>
+
+<!-- Stat Cards -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3">
+    <div class="stat-card" style="--stat-color:#6366f1;">
+      <div class="stat-icon bg-soft-indigo"><i class="bi bi-folder2-open"></i></div>
+      <div class="stat-value">{{ total_projects }}</div>
+      <div class="stat-label">Total Projects</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card" style="--stat-color:#8b5cf6;">
+      <div class="stat-icon bg-soft-indigo"><i class="bi bi-list-task"></i></div>
+      <div class="stat-value">{{ total_tasks }}</div>
+      <div class="stat-label">Total Tasks</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card" style="--stat-color:#22c55e;">
+      <div class="stat-icon bg-soft-green"><i class="bi bi-check-circle"></i></div>
+      <div class="stat-value">{{ completed_tasks }}</div>
+      <div class="stat-label">Completed</div>
+      <span class="stat-trend bg-soft-green">{{ completion_percent }}%</span>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card" style="--stat-color:#ef4444;">
+      <div class="stat-icon bg-soft-red"><i class="bi bi-exclamation-triangle"></i></div>
+      <div class="stat-value">{{ overdue_tasks }}</div>
+      <div class="stat-label">Overdue</div>
+      {% if overdue_tasks > 0 %}<span class="stat-trend bg-soft-red">Needs attention</span>{% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3">
+    <a href="{{ url_for('projects.add_project') }}" class="quick-action">
+      <div class="qa-icon bg-soft-indigo"><i class="bi bi-folder-plus"></i></div>
+      <div>
+        <div class="qa-title">New Project</div>
+        <div class="qa-sub">Start something new</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-lg-3">
+    <a href="{{ url_for('tasks.add_task') }}" class="quick-action">
+      <div class="qa-icon bg-soft-indigo"><i class="bi bi-plus-square"></i></div>
+      <div>
+        <div class="qa-title">New Task</div>
+        <div class="qa-sub">Add to your list</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-lg-3">
+    <a href="{{ url_for('tasks.export_csv') }}" class="quick-action">
+      <div class="qa-icon bg-soft-green"><i class="bi bi-download"></i></div>
+      <div>
+        <div class="qa-title">Export CSV</div>
+        <div class="qa-sub">Download your tasks</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-lg-3">
+    <a href="#analytics" class="quick-action">
+      <div class="qa-icon bg-soft-amber"><i class="bi bi-bar-chart-line"></i></div>
+      <div>
+        <div class="qa-title">View Analytics</div>
+        <div class="qa-sub">Jump to charts</div>
+      </div>
+    </a>
+  </div>
+</div>
+
+<!-- Charts -->
+<div class="row g-3 mb-4" id="analytics">
+  <div class="col-lg-4">
+    <div class="panel h-100">
+      <div class="panel-title"><i class="bi bi-pie-chart"></i> Task Status</div>
+      <canvas id="statusChart" height="220"></canvas>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="panel h-100">
+      <div class="panel-title"><i class="bi bi-bar-chart"></i> Priority Breakdown</div>
+      <canvas id="priorityChart" height="220"></canvas>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="panel h-100 text-center d-flex flex-column justify-content-center">
+      <div class="panel-title justify-content-center"><i class="bi bi-graph-up-arrow"></i> Overall Completion</div>
+      <canvas id="completionChart" height="220"></canvas>
+      <div class="fs-2 fw-800 mt-2">{{ completion_percent }}%</div>
+      <div class="text-muted small">of all tasks completed</div>
+    </div>
+  </div>
+</div>
+
+<!-- Recent Activity + Upcoming Deadlines -->
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="panel h-100">
+      <div class="panel-title"><i class="bi bi-clock-history"></i> Recent Activity</div>
+      {% if recent_tasks %}
+        {% for task in recent_tasks %}
+        <div class="list-row">
+          <div class="list-row-icon
+            {% if task.status == 'Completed' %}bg-soft-green
+            {% elif task.status == 'In Progress' %}bg-soft-indigo
+            {% else %}bg-soft-amber{% endif %}">
+            <i class="bi {% if task.status == 'Completed' %}bi-check-lg{% elif task.status == 'In Progress' %}bi-arrow-repeat{% else %}bi-hourglass-split{% endif %}"></i>
+          </div>
+          <div class="flex-grow-1">
+            <div class="list-row-title">{{ task.title }}</div>
+            <div class="list-row-sub">{{ task.project.name if task.project else '—' }} · {{ task.created_at.strftime('%b %d, %Y') }}</div>
+          </div>
+          <span class="badge badge-status-{{ task.status.lower().replace(' ', '') }}">{{ task.status }}</span>
+        </div>
+        {% endfor %}
+      {% else %}
+      <div class="empty-state py-4">
+        <div class="empty-state-icon" style="width:60px;height:60px;font-size:1.5rem;"><i class="bi bi-inbox"></i></div>
+        <p class="mb-0">No activity yet — create your first task to see it here.</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="panel h-100">
+      <div class="panel-title"><i class="bi bi-calendar-event"></i> Upcoming Deadlines</div>
+      {% set upcoming = recent_tasks|selectattr('due_date')|rejectattr('status', 'equalto', 'Completed')|list|sort(attribute='due_date') %}
+      {% if upcoming %}
+        {% for task in upcoming[:5] %}
+        <div class="list-row">
+          <div class="list-row-icon {% if task.is_overdue %}bg-soft-red{% else %}bg-soft-indigo{% endif %}">
+            <i class="bi {% if task.is_overdue %}bi-alarm{% else %}bi-calendar3{% endif %}"></i>
+          </div>
+          <div class="flex-grow-1">
+            <div class="list-row-title">{{ task.title }}</div>
+            <div class="list-row-sub">{{ task.project.name if task.project else '—' }}</div>
+          </div>
+          <span class="badge {% if task.is_overdue %}badge-priority-high{% else %}badge-status-todo{% endif %}">
+            {{ task.due_date.strftime('%b %d') }}
+          </span>
+        </div>
+        {% endfor %}
+      {% else %}
+      <div class="empty-state py-4">
+        <div class="empty-state-icon" style="width:60px;height:60px;font-size:1.5rem;"><i class="bi bi-calendar-check"></i></div>
+        <p class="mb-0">No upcoming deadlines among your recent tasks.</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Weekly Productivity Summary -->
+<div class="row g-3 mt-1">
+  <div class="col-12">
+    <div class="panel">
+      <div class="panel-title"><i class="bi bi-speedometer2"></i> Productivity Summary</div>
+      <div class="row g-3">
+        <div class="col-6 col-md-3">
+          <div class="list-row">
+            <div class="list-row-icon bg-soft-indigo"><i class="bi bi-list-task"></i></div>
+            <div>
+              <div class="list-row-title">{{ total_tasks }}</div>
+              <div class="list-row-sub">Total tasks</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="list-row">
+            <div class="list-row-icon bg-soft-green"><i class="bi bi-check2-all"></i></div>
+            <div>
+              <div class="list-row-title">{{ completed_tasks }}</div>
+              <div class="list-row-sub">Completed</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="list-row">
+            <div class="list-row-icon bg-soft-amber"><i class="bi bi-hourglass-split"></i></div>
+            <div>
+              <div class="list-row-title">{{ pending_tasks }}</div>
+              <div class="list-row-sub">Pending</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="list-row">
+            <div class="list-row-icon bg-soft-red"><i class="bi bi-exclamation-triangle"></i></div>
+            <div>
+              <div class="list-row-title">{{ overdue_tasks }}</div>
+              <div class="list-row-sub">Overdue</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const textColor = isDark ? '#f0f1f6' : '#14161f';
+  const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(20,20,43,0.06)';
+
+  function makeGradient(ctx, colorFrom, colorTo) {
+    const gradient = ctx.createLinearGradient(0, 0, 0, 220);
+    gradient.addColorStop(0, colorFrom);
+    gradient.addColorStop(1, colorTo);
+    return gradient;
+  }
+
+  Chart.defaults.font.family = "'Inter', sans-serif";
+
+  const statusCtx = document.getElementById('statusChart').getContext('2d');
+  new Chart(statusCtx, {
+    type: 'doughnut',
+    data: {
+      labels: ['To Do', 'In Progress', 'Completed'],
+      datasets: [{
+        data: [{{ status_counts['To Do'] }}, {{ status_counts['In Progress'] }}, {{ status_counts['Completed'] }}],
+        backgroundColor: ['#94a3b8', '#6366f1', '#22c55e'],
+        borderWidth: 0,
+        hoverOffset: 8,
+      }]
+    },
+    options: {
+      animation: { animateRotate: true, duration: 800, easing: 'easeOutQuart' },
+      cutout: '68%',
+      plugins: { legend: { position: 'bottom', labels: { color: textColor, usePointStyle: true, padding: 16, font: { size: 12, weight: 600 } } } }
+    }
+  });
+
+  const priorityCtx = document.getElementById('priorityChart').getContext('2d');
+  new Chart(priorityCtx, {
+    type: 'bar',
+    data: {
+      labels: ['High', 'Medium', 'Low'],
+      datasets: [{
+        data: [{{ priority_counts['High'] }}, {{ priority_counts['Medium'] }}, {{ priority_counts['Low'] }}],
+        backgroundColor: [
+          makeGradient(priorityCtx, '#f87171', '#ef4444'),
+          makeGradient(priorityCtx, '#fbbf24', '#f59e0b'),
+          makeGradient(priorityCtx, '#4ade80', '#22c55e'),
+        ],
+        borderRadius: 8,
+        maxBarThickness: 46,
+      }]
+    },
+    options: {
+      animation: { duration: 800, easing: 'easeOutQuart' },
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: textColor, font: { weight: 600 } }, grid: { display: false } },
+        y: { ticks: { color: textColor, stepSize: 1 }, grid: { color: gridColor } }
+      }
+    }
+  });
+
+  const completionCtx = document.getElementById('completionChart').getContext('2d');
+  new Chart(completionCtx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Completed', 'Remaining'],
+      datasets: [{
+        data: [{{ completion_percent }}, {{ 100 - completion_percent }}],
+        backgroundColor: [makeGradient(completionCtx, '#818cf8', '#6366f1'), isDark ? '#2a2c3b' : '#eaecf2'],
+        borderWidth: 0,
+      }]
+    },
+    options: {
+      animation: { animateRotate: true, duration: 900, easing: 'easeOutQuart' },
+      cutout: '78%',
+      plugins: { legend: { display: false } }
+    }
+  });
+</script>
+{% endblock %}
